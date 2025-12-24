@@ -38,9 +38,16 @@
     </div>
 
     <script>
-        // 初始化 Supabase 客户端
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+     // ==========================================
+    // 1. 配置区 - Supabase 的 Key 是可以放在前端的
+    // ==========================================
+    const SUPABASE_URL = 'https://mmbamtmtchwbofgkpzeh.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_OWZeyzpzJnnacJZW83QH1Q_Me3IeaP8';
 
+// 初始化 Supabase
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// 注意：这里绝对不要写 GEMINI_API_KEY 了！
         // ==========================================
         // 2. AI 处理函数 (IPO 的 Process & Rule)
         // ==========================================
