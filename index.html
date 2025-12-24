@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字漂流瓶 - AI 预言版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gradient-to-b from-blue-50 to-blue-200 min-h-screen p-5 md:p-12">
+
+    <div class="max-w-xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-white">
+        <div class="bg-blue-600 p-8 text-white text-center">
+            <h1 class="text-3xl font-bold tracking-tighter">数字漂流瓶</h1>
+            <p class="opacity-80 mt-2 italic text-sm">写下心声，投向星辰大海，AI 将为你封存一份预言</p>
+        </div>
+
+        <div class="p-8">
+            <textarea id="bottleInput" rows="4" 
+                class="w-full p-4 bg-gray-50 border-2 border-blue-100 rounded-2xl focus:border-blue-500 focus:ring-0 outline-none transition-all text-gray-700" 
+                placeholder="这一刻，你想对世界说点什么？"></textarea>
+            
+            <button id="btnThrow" onclick="handleAction()" 
+                class="w-full mt-4 bg-blue-600 text-white font-bold py-4 rounded-2xl hover:bg-blue-700 transition-all shadow-lg active:scale-95 disabled:opacity-50">
+                将瓶子投掷入海
+            </button>
+        </div>
+
+        <div class="px-8 pb-8">
+            <h2 class="flex justify-between items-center text-blue-900 font-bold mb-4 border-b pb-2">
+                <span>被捞起的瓶子</span>
+                <button onclick="loadBottles()" class="text-xs bg-blue-100 px-3 py-1 rounded-full hover:bg-blue-200">刷新海滩</button>
+            </h2>
+            <div id="bottleList" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                <p class="text-center text-gray-400 py-10 italic">海滩上空空如也...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 钥匙配置区 - 请填入你的真实数据
+        // ==========================================
+        const SUPABASE_URL = 'https://mmbamtmtchwbofgkpzeh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_OWZeyzpzJnnacJZW83QH1Q_Me3IeaP8';
+        const GEMINI_API_KEY = 'AIzaSyAjtMehtFZG5dXSety4pq9dIHf5RWdjV2c';
+
+        // 初始化 Supabase 客户端
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ==========================================
+        // 2. AI 处理函数 (IPO 的 Process & Rule)
+        // ==========================================
+        async function getAIPrediction(content) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `你是一个温暖而神秘的预言家。用户向大海投掷了一个瓶子，内容是：'${content}'。请根据这段话，给出一句充满希望、简短且有共鸣的未来预言（不超过20字）。` }] }]
+                })
+            });
+
+            const data = await response.json();
+            // 提取 Gemini 返回的文本
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        // ==========================================
+        // 3. 核心业务逻辑 (投掷瓶子)
+        // ==========================================
+        async function handleAction() {
+            const input = document.getElementById('bottleInput');
+            const btn = document.getElementById('btnThrow');
+            const content = input.value.trim();
+
+            if (!content) return alert("瓶子里不能为空哦！");
+
+            // 状态锁定
+            btn.disabled = true;
+            btn.innerText = "大师正在海上打捞灵感...";
+
+            try {
+                // 第一步：调用 AI 生成预言
+                const prediction = await getAIPrediction(content);
+
+                // 第二步：将原始信息和预言存入数据库 (Supabase)
+                const { error } = await supabaseClient
+                    .from('bottles') // 确保你的表名是 bottles
+                    .insert([{ content: content, prediction: prediction }]);
+
+                if (error) throw error;
+
+                // 第三步：成功后清理
+                input.value = "";
+                loadBottles(); // 自动刷新列表
+                alert("投掷成功！AI 已为你写下预言。");
+
+            } catch (err) {
+                console.error(err);
+                alert("出错了：" + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "将瓶子投掷入海";
+            }
+        }
+
+        // ==========================================
+        // 4. 数据展示逻辑 (加载列表)
+        // ==========================================
+        async function loadBottles() {
+            const listDiv = document.getElementById('bottleList');
+            
+            // 从数据库查询所有数据，按时间倒序排列
+            const { data, error } = await supabaseClient
+                .from('bottles')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) return console.error(error);
+
+            if (data.length === 0) return;
+
+            // 渲染 HTML
+            listDiv.innerHTML = data.map(b => `
+                <div class="p-5 bg-blue-50 rounded-2xl border border-blue-100 hover:shadow-md transition-shadow">
+                    <p class="text-gray-700 text-sm mb-3 font-medium">“${b.content}”</p>
+                    <div class="bg-white p-3 rounded-xl border-l-4 border-blue-500 shadow-sm">
+                        <p class="text-blue-600 text-xs font-bold mb-1 tracking-tight">✨ AI 预言家：</p>
+                        <p class="text-blue-800 text-sm italic">${b.prediction}</p>
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-3 text-right">${new Date(b.created_at).toLocaleString()}</p>
+                </div>
+            `).join('');
+        }
+
+        // 页面首次打开时加载数据
+        loadBottles();
+    </script>
+</body>
+</html>
