@@ -38,34 +38,22 @@
     </div>
 
     <script>
-        // ==========================================
-        // 1. 钥匙配置区 - 请填入你的真实数据
-        // ==========================================
-        const SUPABASE_URL = 'https://mmbamtmtchwbofgkpzeh.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_OWZeyzpzJnnacJZW83QH1Q_Me3IeaP8';
-        const GEMINI_API_KEY = 'AIzaSyAjtMehtFZG5dXSety4pq9dIHf5RWdjV2c';
-
         // 初始化 Supabase 客户端
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // ==========================================
         // 2. AI 处理函数 (IPO 的 Process & Rule)
         // ==========================================
-        async function getAIPrediction(content) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `你是一个温暖而神秘的预言家。用户向大海投掷了一个瓶子，内容是：'${content}'。请根据这段话，给出一句充满希望、简短且有共鸣的未来预言（不超过20字）。` }] }]
-                })
-            });
+    async function getAIPrediction(content) {
+    // 现在的请求目标不再是 Google，而是你自己的 Vercel 后台地址
+    const response = await fetch('/api/get-prediction', {
+        method: 'POST',
+        body: JSON.stringify({ content: content })
+    });
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
+    }
 
-            const data = await response.json();
-            // 提取 Gemini 返回的文本
-            return data.candidates[0].content.parts[0].text;
-        }
 
         // ==========================================
         // 3. 核心业务逻辑 (投掷瓶子)
